@@ -18,11 +18,11 @@ pnpm db:push    # create the SQLite database (db.sqlite)
 pnpm dev        # http://localhost:3000
 ```
 
-The app starts empty. No `.env` is needed: the database defaults to `file:./db.sqlite`.
+The app starts empty. `pnpm db:seed` loads demo data (three investments, a waterfall and one distribution), and `pnpm db:reset` empties the database again (reload the page afterwards). No `.env` is needed: the database defaults to `file:./db.sqlite`.
 
 `pnpm build && pnpm start` runs the production build, which is noticeably snappier than `pnpm dev` (requests take a few ms instead of a couple hundred).
 
-`pnpm db:reset` empties the database (reload the page afterwards). Optionally,
+Checks:
 
 ```bash
 pnpm test        # engine unit tests, property tests and server tests
