@@ -1,7 +1,7 @@
 // The distributions engine: pure functions, plain data in and out. No database, tRPC or React.
 export * from "./types";
 export { addDays, daysBetween, isValidDate } from "./dates";
-export { computeInvestorState } from "./investor-state";
+export { computeInvestmentState } from "./investment-state";
 export {
   allocationsToPayments,
   prefRateOf,

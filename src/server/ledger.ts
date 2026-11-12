@@ -2,21 +2,21 @@
 // ones that haven't been voided; only they count as money paid.
 import { and, asc, eq } from "drizzle-orm";
 
-import type { Investor, PriorPayment, Tier } from "~/lib/engine";
+import type { Investment, PriorPayment, Tier } from "~/lib/engine";
 import type { PlanInputs } from "~/lib/plan";
 import type { Db } from "~/server/db";
 import {
   distributionAllocations,
   distributions,
-  investors,
+  investments,
   waterfallTiers,
 } from "~/server/db/schema";
 
-export async function loadInvestors(db: Db): Promise<Investor[]> {
+export async function loadInvestments(db: Db): Promise<Investment[]> {
   return db
     .select()
-    .from(investors)
-    .orderBy(asc(investors.investmentDate), asc(investors.id));
+    .from(investments)
+    .orderBy(asc(investments.investmentDate), asc(investments.id));
 }
 
 export async function loadTiers(db: Db): Promise<Tier[]> {
@@ -50,12 +50,12 @@ export async function loadLatestActiveDistribution(db: Db) {
   return active.at(-1) ?? null;
 }
 
-/** Every payment to an investor from an active distribution. */
+/** Every payment to an investment from an active distribution. */
 export async function loadPriorPayments(db: Db): Promise<PriorPayment[]> {
   const rows = await db
     .select({
       date: distributions.date,
-      investorId: distributionAllocations.investorId,
+      investmentId: distributionAllocations.investmentId,
       tierType: distributionAllocations.tierType,
       amountCents: distributionAllocations.amountCents,
     })
@@ -71,20 +71,22 @@ export async function loadPriorPayments(db: Db): Promise<PriorPayment[]> {
       ),
     );
   return rows.flatMap((row) =>
-    row.investorId === null ? [] : [{ ...row, investorId: row.investorId }],
+    row.investmentId === null
+      ? []
+      : [{ ...row, investmentId: row.investmentId }],
   );
 }
 
 /** Everything the planner needs, read from the database. */
 export async function loadPlanInputs(db: Db): Promise<PlanInputs> {
-  const [allInvestors, tiers, active, priorPayments] = await Promise.all([
-    loadInvestors(db),
+  const [allInvestments, tiers, active, priorPayments] = await Promise.all([
+    loadInvestments(db),
     loadTiers(db),
     loadActiveDistributions(db),
     loadPriorPayments(db),
   ]);
   return {
-    investors: allInvestors,
+    investments: allInvestments,
     tiers,
     activeDistributions: active.map(({ id, date, amountCents }) => ({
       id,

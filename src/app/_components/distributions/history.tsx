@@ -203,15 +203,16 @@ function tierChipLabel(tier: Tier): string {
   }
 }
 
-/** Groups the stored allocations into one row per recipient. They're stored investors first, managers last. */
+/** Groups the stored allocations into one row per recipient. They're stored investments first, managers last. */
 function toRows(d: Distribution): RecipientRow[] {
   const rows = new Map<string, RecipientRow>();
   for (const a of d.allocations) {
-    const key = a.investorId === null ? "managers" : `investor-${a.investorId}`;
+    const key =
+      a.investmentId === null ? "managers" : `investor-${a.investmentId}`;
     const row = rows.get(key) ?? {
       key,
       name: a.recipientName,
-      kind: a.investorId === null ? "managers" : "investor",
+      kind: a.investmentId === null ? "managers" : "investor",
       ownership: null,
       byTier: {},
       totalCents: 0,

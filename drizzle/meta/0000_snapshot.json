@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "90fd808d-c75f-4088-9e53-1b51057bef76",
+  "id": "355d2037-7d7b-44d9-ae8f-a1e0ac4af4db",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "distribution_allocations": {
@@ -35,8 +35,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "investor_id": {
-          "name": "investor_id",
+        "investment_id": {
+          "name": "investment_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -137,8 +137,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "investors": {
-      "name": "investors",
+    "investments": {
+      "name": "investments",
       "columns": {
         "id": {
           "name": "id",
@@ -147,8 +147,8 @@
           "notNull": true,
           "autoincrement": true
         },
-        "name": {
-          "name": "name",
+        "investor_name": {
+          "name": "investor_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

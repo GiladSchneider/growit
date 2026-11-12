@@ -1,6 +1,6 @@
 "use client";
 
-import type { InvestorState } from "~/lib/engine";
+import type { InvestmentState } from "~/lib/engine";
 import { formatBps, formatCents, formatDate } from "~/lib/format";
 import { cn } from "~/lib/utils";
 
@@ -16,7 +16,7 @@ export function PrefAccrualCard({
   paidLabel = "Paid",
   className,
 }: {
-  state: InvestorState;
+  state: InvestmentState;
   date: string;
   investmentDate: string;
   prefRateBps: number | null;

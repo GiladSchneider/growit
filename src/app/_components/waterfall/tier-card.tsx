@@ -110,7 +110,7 @@ export function TierCard({
           {errors.map((error) => (
             <p
               key={error}
-              className="mt-3 flex items-start gap-1.5 text-sm text-red-600"
+              className="text-destructive mt-3 flex items-start gap-1.5 text-sm"
             >
               <CircleAlert className="mt-0.5 size-4 shrink-0" />
               {error}

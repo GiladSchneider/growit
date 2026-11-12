@@ -1,10 +1,10 @@
-import { computeInvestorState } from "./investor-state";
+import { computeInvestmentState } from "./investment-state";
 import { Decimal, allocateProRata, sum } from "./money";
 import type {
   Allocation,
   DistributionResult,
-  Investor,
-  InvestorState,
+  Investment,
+  InvestmentState,
   PriorPayment,
   Tier,
   TierType,
@@ -13,7 +13,7 @@ import type {
 const BPS = 10_000;
 
 export type RunDistributionInput = {
-  investors: Investor[];
+  investments: Investment[];
   tiers: Tier[];
   /** Payments from all active distributions before this one. */
   priorPayments: PriorPayment[];
@@ -26,28 +26,35 @@ export type RunDistributionInput = {
  * Pure: the same inputs always give the same output, which is what makes void-and-re-enter safe.
  */
 export function runDistribution({
-  investors,
+  investments,
   tiers,
   priorPayments,
   date,
   amountCents,
 }: RunDistributionInput): DistributionResult {
-  // Only investors who had invested by the distribution date take part. Someone who invests on
-  // the distribution date itself is included (with 0 days of pref). Sorting here fixes the order
+  // Only investments made by the distribution date take part. One made on the distribution
+  // date itself is included (with 0 days of pref). Sorting here fixes the order
   // that decides who gets a leftover cent when rounding ties.
-  const eligible = investors
-    .filter((investor) => investor.investmentDate <= date)
+  const eligible = investments
+    .filter((investment) => investment.investmentDate <= date)
     .sort(byCreatedAt);
   if (eligible.length === 0) {
     throw new Error("No investors had invested by this date");
   }
 
   const prefRateBps = prefRateOf(tiers);
-  const totalInvested = sum(eligible.map((investor) => investor.amountCents));
+  const totalInvested = sum(
+    eligible.map((investment) => investment.amountCents),
+  );
 
-  const rows = eligible.map((investor) => ({
-    investor,
-    before: computeInvestorState(investor, priorPayments, date, prefRateBps),
+  const rows = eligible.map((investment) => ({
+    investment,
+    before: computeInvestmentState(
+      investment,
+      priorPayments,
+      date,
+      prefRateBps,
+    ),
     paid: { roc: 0, pref: 0, split: 0 },
   }));
   let managerCents = 0;
@@ -68,11 +75,11 @@ export function runDistribution({
       if (maxDistributableCents !== null) maxDistributableCents += sum(owed);
     } else {
       // Profit split takes everything left. Investors get investorBps / 10,000 of it, shared by
-      // ownership % among eligible investors; managers get the rest as a single recipient.
+      // ownership % among eligible investments; managers get the rest as a single recipient.
       // It's done as one pro-rata split (managers listed last) so the cents always add up.
       const weights = [
         ...rows.map((row) =>
-          new Decimal(row.investor.amountCents).mul(tier.investorBps),
+          new Decimal(row.investment.amountCents).mul(tier.investorBps),
         ),
         new Decimal(totalInvested).mul(BPS - tier.investorBps),
       ];
@@ -97,14 +104,14 @@ export function runDistribution({
     date,
     amountCents,
     tierTotals,
-    investors: rows.map(({ investor, before, paid }) => ({
-      investor,
-      ownership: investor.amountCents / totalInvested,
+    investments: rows.map(({ investment, before, paid }) => ({
+      investment,
+      ownership: investment.amountCents / totalInvested,
       byTier: paid,
       totalCents: paid.roc + paid.pref + paid.split,
       before,
-      after: computeInvestorState(
-        investor,
+      after: computeInvestmentState(
+        investment,
         paymentsIncludingThis,
         date,
         prefRateBps,
@@ -129,12 +136,12 @@ export function allocationsToPayments(
   allocations: Allocation[],
 ): PriorPayment[] {
   return allocations.flatMap((a) =>
-    a.investorId === null
+    a.investmentId === null
       ? []
       : [
           {
             date,
-            investorId: a.investorId,
+            investmentId: a.investmentId,
             tierType: a.tierType,
             amountCents: a.amountCents,
           },
@@ -142,7 +149,7 @@ export function allocationsToPayments(
   );
 }
 
-function amountOwed(state: InvestorState, tierType: "roc" | "pref"): number {
+function amountOwed(state: InvestmentState, tierType: "roc" | "pref"): number {
   return tierType === "roc"
     ? state.unreturnedCapitalCents
     : state.prefOwedCents;
@@ -158,22 +165,22 @@ function payOwed(owed: number[], availableCents: number): number[] {
   return allocateProRata(availableCents, owed);
 }
 
-function byCreatedAt(a: Investor, b: Investor): number {
+function byCreatedAt(a: Investment, b: Investment): number {
   if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1;
   return a.id - b.id;
 }
 
-/** One allocation per tier per eligible investor (zeros included), plus managers' split share. */
+/** One allocation per tier per eligible investment (zeros included), plus managers' split share. */
 function buildAllocations(
   tiers: Tier[],
-  rows: { investor: Investor; paid: Record<TierType, number> }[],
+  rows: { investment: Investment; paid: Record<TierType, number> }[],
   managerCents: number,
 ): Allocation[] {
   return tiers.flatMap((tier) => [
     ...rows.map((row) => ({
       tierType: tier.type,
       recipientType: "investor" as const,
-      investorId: row.investor.id,
+      investmentId: row.investment.id,
       amountCents: row.paid[tier.type],
     })),
     ...(tier.type === "split"
@@ -181,7 +188,7 @@ function buildAllocations(
           {
             tierType: tier.type,
             recipientType: "manager" as const,
-            investorId: null,
+            investmentId: null,
             amountCents: managerCents,
           },
         ]

@@ -4,9 +4,9 @@ import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import {
-  computeInvestorState,
+  computeInvestmentState,
   prefRateOf,
-  type InvestorState,
+  type InvestmentState,
   type TierType,
 } from "~/lib/engine";
 import { formatCents, formatDate } from "~/lib/format";
@@ -18,7 +18,7 @@ import { Hint } from "../shared";
 import { TIER_META } from "../tier-meta";
 import { Money } from "../ui-kit";
 import { usePlanInputs } from "../use-plan-inputs";
-import type { InvestorRow } from "./investor-dialog";
+import type { InvestmentRow } from "./investment-dialog";
 
 const LOCKED_HINT =
   "Included in a finalized distribution, so it can't be deleted and its amount and date can't change. Void that distribution to unlock it.";
@@ -28,11 +28,11 @@ const LOCKED_HINT =
  * today, how its preferred return accrued, and every payment it received.
  */
 export function InvestmentDetails({
-  investor,
+  investment,
   onEdit,
   onDelete,
 }: {
-  investor: InvestorRow;
+  investment: InvestmentRow;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -43,13 +43,18 @@ export function InvestmentDetails({
   // The same function and inputs the server uses, run here on data that's already cached.
   const prefRateBps = inputs ? prefRateOf(inputs.tiers) : null;
   const state =
-    inputs && investor.investmentDate <= today
-      ? computeInvestorState(investor, inputs.priorPayments, today, prefRateBps)
+    inputs && investment.investmentDate <= today
+      ? computeInvestmentState(
+          investment,
+          inputs.priorPayments,
+          today,
+          prefRateBps,
+        )
       : null;
 
   // Every distribution this investment took part in, newest first (the list is already in that order).
   const payments = distributions.flatMap((d) => {
-    const mine = d.allocations.filter((a) => a.investorId === investor.id);
+    const mine = d.allocations.filter((a) => a.investmentId === investment.id);
     if (mine.length === 0) return [];
     const paidIn = (type: TierType) =>
       mine
@@ -74,17 +79,17 @@ export function InvestmentDetails({
         <h4 className="text-sm font-semibold">
           {state
             ? "Balance today"
-            : `Starts ${formatDate(investor.investmentDate)}, so there's no balance yet`}
+            : `Starts ${formatDate(investment.investmentDate)}, so there's no balance yet`}
         </h4>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={onEdit}>
-            <Pencil /> {investor.locked ? "Rename" : "Edit"}
+            <Pencil /> {investment.locked ? "Rename" : "Edit"}
           </Button>
-          <Hint text={investor.locked ? LOCKED_HINT : null}>
+          <Hint text={investment.locked ? LOCKED_HINT : null}>
             <Button
               variant="outline"
               size="sm"
-              disabled={investor.locked}
+              disabled={investment.locked}
               onClick={onDelete}
             >
               <Trash2 /> Delete
@@ -98,13 +103,13 @@ export function InvestmentDetails({
           <Figures
             className="lg:col-span-2"
             state={state}
-            invested={investor.amountCents}
+            invested={investment.amountCents}
           />
           <PrefAccrualCard
             className="lg:col-span-3"
             state={state}
             date={today}
-            investmentDate={investor.investmentDate}
+            investmentDate={investment.investmentDate}
             prefRateBps={prefRateBps}
           />
         </div>
@@ -185,7 +190,7 @@ function Figures({
   invested,
   className,
 }: {
-  state: InvestorState;
+  state: InvestmentState;
   invested: number;
   className?: string;
 }) {

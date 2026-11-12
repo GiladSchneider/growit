@@ -10,10 +10,10 @@ import { NewDistribution } from "./new-distribution";
 
 export function DistributionsPage() {
   const distributions = api.distributions.list.useQuery().data;
-  const investors = api.investors.list.useQuery().data;
+  const investments = api.investments.list.useQuery().data;
   const { loaded, savedTiers, dirty } = useWaterfallDraft();
 
-  if (!distributions || !investors || !loaded)
+  if (!distributions || !investments || !loaded)
     return <PageSkeleton title="Distributions" />;
 
   // Lifetime totals from active (non-voided) distributions.
@@ -32,7 +32,7 @@ export function DistributionsPage() {
           <StatCard
             label="Capital returned"
             value={formatCents(capitalReturned)}
-            hint={`${formatPercent(capitalReturned / investors.totalCents)} of invested`}
+            hint={`${formatPercent(capitalReturned / investments.totalCents)} of invested`}
             dot={TIER_META.roc.swatch}
           />
           <StatCard
@@ -43,7 +43,7 @@ export function DistributionsPage() {
           <StatCard
             label="Profit split to investors"
             value={formatCents(
-              paid((a) => a.tierType === "split" && a.investorId !== null),
+              paid((a) => a.tierType === "split" && a.investmentId !== null),
             )}
             dot={TIER_META.split.swatch}
           />
@@ -56,10 +56,10 @@ export function DistributionsPage() {
       )}
 
       <NewDistribution
-        investorCount={investors.investors.length}
+        investmentCount={investments.investments.length}
         hasWaterfall={savedTiers.length > 0}
         waterfallDirty={dirty}
-        latestDate={investors.latestDistributionDate}
+        latestDate={investments.latestDistributionDate}
       />
 
       {distributions.length > 0 && (

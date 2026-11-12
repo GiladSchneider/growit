@@ -1,32 +1,32 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  computeInvestorState,
+  computeInvestmentState,
   runDistribution,
   validateWaterfall,
   type PriorPayment,
   type Tier,
 } from "./index";
 import { allocateProRata } from "./money";
-import { makeInvestor, toPayments } from "./test-helpers";
+import { makeInvestment, toPayments } from "./test-helpers";
 
 const ROC: Tier = { type: "roc" };
 const PREF_8: Tier = { type: "pref", rateBps: 800 };
 const SPLIT_80_20: Tier = { type: "split", investorBps: 8000 };
 
 describe("worked example: ROC → 8% pref → 80/20", () => {
-  const a = makeInvestor(1, 100_000, "2025-01-01");
+  const a = makeInvestment(1, 100_000, "2025-01-01");
   const tiers = [ROC, PREF_8, SPLIT_80_20];
 
   const first = runDistribution({
-    investors: [a],
+    investments: [a],
     tiers,
     priorPayments: [],
     date: "2026-01-01",
     amountCents: 50_000_00,
   });
   const second = runDistribution({
-    investors: [a],
+    investments: [a],
     tiers,
     priorPayments: toPayments(first),
     date: "2027-01-01",
@@ -34,19 +34,19 @@ describe("worked example: ROC → 8% pref → 80/20", () => {
   });
 
   it("first distribution is all return of capital", () => {
-    expect(first.investors[0]!.byTier).toEqual({
+    expect(first.investments[0]!.byTier).toEqual({
       roc: 50_000_00,
       pref: 0,
       split: 0,
     });
     expect(first.managerCents).toBe(0);
-    expect(first.investors[0]!.after.unreturnedCapitalCents).toBe(50_000_00);
+    expect(first.investments[0]!.after.unreturnedCapitalCents).toBe(50_000_00);
     // A year of pref was earned but not paid, because ROC came first and used up the money.
-    expect(first.investors[0]!.after.prefOwedCents).toBe(8_000_00);
+    expect(first.investments[0]!.after.prefOwedCents).toBe(8_000_00);
   });
 
   it("second distribution finishes ROC, pays accumulated pref, then splits the rest", () => {
-    expect(second.investors[0]!.byTier).toEqual({
+    expect(second.investments[0]!.byTier).toEqual({
       roc: 50_000_00,
       pref: 12_000_00, // $8,000 on $100k for 365 days + $4,000 on $50k for 365 days
       split: 30_400_00,
@@ -62,7 +62,7 @@ describe("worked example: ROC → 8% pref → 80/20", () => {
   });
 
   it("shows the pref accrual periods", () => {
-    expect(second.investors[0]!.before.accrualPeriods).toEqual([
+    expect(second.investments[0]!.before.accrualPeriods).toEqual([
       {
         from: "2025-01-01",
         to: "2026-01-01",
@@ -78,7 +78,7 @@ describe("worked example: ROC → 8% pref → 80/20", () => {
         accruedCents: "400000",
       },
     ]);
-    expect(second.investors[0]!.after).toMatchObject({
+    expect(second.investments[0]!.after).toMatchObject({
       unreturnedCapitalCents: 0,
       prefOwedCents: 0,
       totalReceivedCents: 50_000_00 + 50_000_00 + 12_000_00 + 30_400_00,
@@ -88,10 +88,10 @@ describe("worked example: ROC → 8% pref → 80/20", () => {
 
 describe("tier order", () => {
   it("pref-before-ROC and ROC-before-pref give different future accrual", () => {
-    const a = makeInvestor(1, 100_000, "2025-01-01");
+    const a = makeInvestment(1, 100_000, "2025-01-01");
     const run = (tiers: Tier[]) => {
       const first = runDistribution({
-        investors: [a],
+        investments: [a],
         tiers,
         priorPayments: [],
         date: "2026-01-01",
@@ -99,7 +99,7 @@ describe("tier order", () => {
       });
       return {
         first,
-        later: computeInvestorState(a, toPayments(first), "2027-01-01", 800),
+        later: computeInvestmentState(a, toPayments(first), "2027-01-01", 800),
       };
     };
 
@@ -107,12 +107,12 @@ describe("tier order", () => {
     const prefFirst = run([PREF_8, ROC, SPLIT_80_20]);
 
     // ROC first: all $50k returns capital, leaving $50k unreturned.
-    expect(rocFirst.first.investors[0]!.byTier).toMatchObject({
+    expect(rocFirst.first.investments[0]!.byTier).toMatchObject({
       roc: 50_000_00,
       pref: 0,
     });
     // Pref first: $8k pref, then $42k capital, leaving $58k unreturned.
-    expect(prefFirst.first.investors[0]!.byTier).toMatchObject({
+    expect(prefFirst.first.investments[0]!.byTier).toMatchObject({
       roc: 42_000_00,
       pref: 8_000_00,
     });
@@ -127,22 +127,22 @@ describe("tier order", () => {
 
 describe("pref after capital is fully returned", () => {
   it("stays owed but stops growing", () => {
-    const a = makeInvestor(1, 100_000, "2025-01-01");
+    const a = makeInvestment(1, 100_000, "2025-01-01");
     const tiers = [ROC, PREF_8, SPLIT_80_20];
     const first = runDistribution({
-      investors: [a],
+      investments: [a],
       tiers,
       priorPayments: [],
       date: "2026-01-01",
       amountCents: 100_000_00,
     });
-    expect(first.investors[0]!.byTier).toEqual({
+    expect(first.investments[0]!.byTier).toEqual({
       roc: 100_000_00,
       pref: 0,
       split: 0,
     });
 
-    const ayearLater = computeInvestorState(
+    const ayearLater = computeInvestmentState(
       a,
       toPayments(first),
       "2027-01-01",
@@ -156,13 +156,13 @@ describe("pref after capital is fully returned", () => {
     });
 
     const second = runDistribution({
-      investors: [a],
+      investments: [a],
       tiers,
       priorPayments: toPayments(first),
       date: "2027-01-01",
       amountCents: 10_000_00,
     });
-    expect(second.investors[0]!.byTier).toEqual({
+    expect(second.investments[0]!.byTier).toEqual({
       roc: 0,
       pref: 8_000_00,
       split: 1_600_00,
@@ -172,35 +172,35 @@ describe("pref after capital is fully returned", () => {
 });
 
 describe("eligibility", () => {
-  const a = makeInvestor(1, 100_000, "2025-01-01");
+  const a = makeInvestment(1, 100_000, "2025-01-01");
   const tiers = [ROC, PREF_8, SPLIT_80_20];
 
-  it("excludes investors who invest after the distribution date, including from ownership %", () => {
-    const late = makeInvestor(2, 300_000, "2026-01-02");
+  it("excludes investments made after the distribution date, including from ownership %", () => {
+    const late = makeInvestment(2, 300_000, "2026-01-02");
     const result = runDistribution({
-      investors: [a, late],
+      investments: [a, late],
       tiers,
       priorPayments: [],
       date: "2026-01-01",
       amountCents: 200_000_00,
     });
-    expect(result.investors.map((r) => r.investor.id)).toEqual([1]);
-    expect(result.investors[0]!.ownership).toBe(1);
-    expect(result.allocations.some((alloc) => alloc.investorId === 2)).toBe(
+    expect(result.investments.map((r) => r.investment.id)).toEqual([1]);
+    expect(result.investments[0]!.ownership).toBe(1);
+    expect(result.allocations.some((alloc) => alloc.investmentId === 2)).toBe(
       false,
     );
   });
 
-  it("includes an investor who invests on the distribution date, with 0 days of pref", () => {
-    const sameDay = makeInvestor(2, 100_000, "2026-01-01");
+  it("includes an investment made on the distribution date, with 0 days of pref", () => {
+    const sameDay = makeInvestment(2, 100_000, "2026-01-01");
     const result = runDistribution({
-      investors: [a, sameDay],
+      investments: [a, sameDay],
       tiers,
       priorPayments: [],
       date: "2026-01-01",
       amountCents: 300_000_00,
     });
-    const [rowA, rowB] = result.investors;
+    const [rowA, rowB] = result.investments;
     expect(rowB!.before.accrualPeriods).toEqual([]);
     expect(rowB!.before.prefOwedCents).toBe(0);
     expect(rowB!.byTier).toEqual({
@@ -219,7 +219,7 @@ describe("eligibility", () => {
   it("refuses to run when nobody has invested yet", () => {
     expect(() =>
       runDistribution({
-        investors: [a],
+        investments: [a],
         tiers,
         priorPayments: [],
         date: "2024-12-31",
@@ -229,45 +229,45 @@ describe("eligibility", () => {
   });
 });
 
-describe("computeInvestorState", () => {
-  const a = makeInvestor(1, 100_000, "2025-01-01");
+describe("computeInvestmentState", () => {
+  const a = makeInvestment(1, 100_000, "2025-01-01");
   const payments: PriorPayment[] = [
     {
       date: "2026-01-01",
-      investorId: 1,
+      investmentId: 1,
       tierType: "roc",
       amountCents: 50_000_00,
     },
     {
       date: "2027-01-01",
-      investorId: 1,
+      investmentId: 1,
       tierType: "roc",
       amountCents: 50_000_00,
     },
-    { date: "2026-01-01", investorId: 2, tierType: "roc", amountCents: 1 }, // someone else
+    { date: "2026-01-01", investmentId: 2, tierType: "roc", amountCents: 1 }, // someone else
   ];
 
   it("ignores payments after the as-of date and includes payments on it", () => {
-    const state = computeInvestorState(a, payments, "2026-01-01", 800);
+    const state = computeInvestmentState(a, payments, "2026-01-01", 800);
     expect(state.capitalReturnedCents).toBe(50_000_00);
     expect(state.unreturnedCapitalCents).toBe(50_000_00);
     // Pref through 2026-01-01 accrued entirely on the full $100k.
     expect(state.prefOwedCents).toBe(8_000_00);
 
-    const before = computeInvestorState(a, payments, "2025-12-31", 800);
+    const before = computeInvestmentState(a, payments, "2025-12-31", 800);
     expect(before.capitalReturnedCents).toBe(0);
   });
 
   it("accrues over 366 days across a leap year", () => {
-    const b = makeInvestor(1, 100_000, "2027-06-01");
-    const state = computeInvestorState(b, [], "2028-06-01", 800);
+    const b = makeInvestment(1, 100_000, "2027-06-01");
+    const state = computeInvestmentState(b, [], "2028-06-01", 800);
     expect(state.accrualPeriods[0]!.days).toBe(366);
     // $8,000 × 366 / 365 = $8,021.9178... → $8,021.92
     expect(state.prefOwedCents).toBe(8_021_92);
   });
 
   it("has no pref when there is no pref tier", () => {
-    const state = computeInvestorState(a, payments, "2030-01-01", null);
+    const state = computeInvestmentState(a, payments, "2030-01-01", null);
     expect(state).toMatchObject({
       prefAccruedCents: "0",
       prefOwedCents: 0,
@@ -277,27 +277,27 @@ describe("computeInvestorState", () => {
 
   it("rounds half a cent up", () => {
     // $365 for 365 days: at 0.05% that's exactly 18.25¢ (→ 18¢), at 0.10% exactly 36.5¢ (→ 37¢).
-    const small = makeInvestor(1, 365, "2025-01-01");
-    expect(computeInvestorState(small, [], "2026-01-01", 5).prefOwedCents).toBe(
-      18,
-    );
+    const small = makeInvestment(1, 365, "2025-01-01");
     expect(
-      computeInvestorState(small, [], "2026-01-01", 10).prefOwedCents,
+      computeInvestmentState(small, [], "2026-01-01", 5).prefOwedCents,
+    ).toBe(18);
+    expect(
+      computeInvestmentState(small, [], "2026-01-01", 10).prefOwedCents,
     ).toBe(37);
   });
 });
 
 describe("no split tier", () => {
   it("reports what couldn't be distributed and the most that can be", () => {
-    const a = makeInvestor(1, 100_000, "2025-01-01");
+    const a = makeInvestment(1, 100_000, "2025-01-01");
     const result = runDistribution({
-      investors: [a],
+      investments: [a],
       tiers: [ROC, PREF_8],
       priorPayments: [],
       date: "2026-01-01",
       amountCents: 200_000_00,
     });
-    expect(result.investors[0]!.byTier).toEqual({
+    expect(result.investments[0]!.byTier).toEqual({
       roc: 100_000_00,
       pref: 8_000_00,
       split: 0,
@@ -308,17 +308,17 @@ describe("no split tier", () => {
 });
 
 describe("pro rata by amount owed", () => {
-  it("splits a short pref tier in proportion to each investor's owed pref", () => {
-    const a = makeInvestor(1, 100_000, "2025-01-01"); // 365 days → owed $8,000.00
-    const b = makeInvestor(2, 100_000, "2025-07-02"); // 183 days → owed $4,010.96
+  it("splits a short pref tier in proportion to each investment's owed pref", () => {
+    const a = makeInvestment(1, 100_000, "2025-01-01"); // 365 days → owed $8,000.00
+    const b = makeInvestment(2, 100_000, "2025-07-02"); // 183 days → owed $4,010.96
     const result = runDistribution({
-      investors: [a, b],
+      investments: [a, b],
       tiers: [PREF_8, ROC, SPLIT_80_20],
       priorPayments: [],
       date: "2026-01-01",
       amountCents: 6_000_00,
     });
-    const [rowA, rowB] = result.investors;
+    const [rowA, rowB] = result.investments;
     expect(rowA!.before.prefOwedCents).toBe(8_000_00);
     expect(rowB!.before.prefOwedCents).toBe(4_010_96);
 
@@ -336,22 +336,22 @@ describe("pro rata by amount owed", () => {
 });
 
 describe("rounding", () => {
-  it("splits $100.00 three ways exactly, giving the extra cent to the earliest-created investor", () => {
+  it("splits $100.00 three ways exactly, giving the extra cent to the earliest-created investment", () => {
     // Passed in a scrambled order on purpose: tie-breaking uses createdAt, not array order.
-    const investors = [
-      makeInvestor(3, 1_000, "2025-01-01", "2025-01-03T00:00:00.000Z"),
-      makeInvestor(1, 1_000, "2025-01-01", "2025-01-01T00:00:00.000Z"),
-      makeInvestor(2, 1_000, "2025-01-01", "2025-01-02T00:00:00.000Z"),
+    const investments = [
+      makeInvestment(3, 1_000, "2025-01-01", "2025-01-03T00:00:00.000Z"),
+      makeInvestment(1, 1_000, "2025-01-01", "2025-01-01T00:00:00.000Z"),
+      makeInvestment(2, 1_000, "2025-01-01", "2025-01-02T00:00:00.000Z"),
     ];
     const result = runDistribution({
-      investors,
+      investments,
       tiers: [ROC, SPLIT_80_20],
       priorPayments: [],
       date: "2025-06-01",
       amountCents: 100_00,
     });
     const roc = Object.fromEntries(
-      result.investors.map((r) => [r.investor.id, r.byTier.roc]),
+      result.investments.map((r) => [r.investment.id, r.byTier.roc]),
     );
     expect(roc).toEqual({ 1: 33_34, 2: 33_33, 3: 33_33 });
   });
@@ -359,13 +359,13 @@ describe("rounding", () => {
   it("gives managers the extra cent last in the split", () => {
     // $0.03 split 50/50 between one investor and managers: 1.5¢ each, tie → investor gets 2¢.
     const result = runDistribution({
-      investors: [makeInvestor(1, 1, "2025-01-01")],
+      investments: [makeInvestment(1, 1, "2025-01-01")],
       tiers: [{ type: "split", investorBps: 5000 }],
       priorPayments: [],
       date: "2025-01-01",
       amountCents: 3,
     });
-    expect(result.investors[0]!.byTier.split).toBe(2);
+    expect(result.investments[0]!.byTier.split).toBe(2);
     expect(result.managerCents).toBe(1);
   });
 
@@ -379,13 +379,13 @@ describe("rounding", () => {
 
 describe("determinism", () => {
   it("gives identical allocations for identical inputs", () => {
-    const investors = [
-      makeInvestor(1, 123_457, "2024-03-15"),
-      makeInvestor(2, 98_765, "2024-09-30"),
-      makeInvestor(3, 50_000, "2025-02-28"),
+    const investments = [
+      makeInvestment(1, 123_457, "2024-03-15"),
+      makeInvestment(2, 98_765, "2024-09-30"),
+      makeInvestment(3, 50_000, "2025-02-28"),
     ];
     const input = {
-      investors,
+      investments,
       tiers: [PREF_8, ROC, { type: "split", investorBps: 7000 } as Tier],
       priorPayments: [],
       date: "2026-01-01",

@@ -11,9 +11,9 @@ const createdAt = () =>
     .$defaultFn(() => new Date().toISOString());
 
 /** The cap table. One row per investment: someone who invests twice has two rows. */
-export const investors = sqliteTable("investors", {
+export const investments = sqliteTable("investments", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull(),
+  investorName: text("investor_name").notNull(),
   amountCents: integer("amount_cents").notNull(),
   investmentDate: text("investment_date").notNull(),
   createdAt: createdAt(),
@@ -61,9 +61,9 @@ export const distributionAllocations = sqliteTable(
     }).notNull(),
     /**
      * Null for the managers' share. Deliberately not a foreign key: voided distributions keep their
-     * allocations for the audit trail, and an investor they unlocked may later be deleted.
+     * allocations for the audit trail, and an investment they unlocked may later be deleted.
      */
-    investorId: integer("investor_id"),
+    investmentId: integer("investment_id"),
     amountCents: integer("amount_cents").notNull(),
   },
   (t) => [index("allocations_distribution_idx").on(t.distributionId)],

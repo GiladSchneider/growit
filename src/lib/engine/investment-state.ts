@@ -2,8 +2,8 @@ import { daysBetween } from "./dates";
 import { Decimal, roundHalfUp, sum } from "./money";
 import type {
   AccrualPeriod,
-  Investor,
-  InvestorState,
+  Investment,
+  InvestmentState,
   PriorPayment,
   TierType,
 } from "./types";
@@ -15,7 +15,7 @@ import type {
 const ACCRUAL_DENOMINATOR = 10_000 * 365;
 
 /**
- * Where one investor stands as of `asOfDate`: capital returned so far, pref accrued and still owed,
+ * Where one investment stands as of `asOfDate`: capital returned so far, pref accrued and still owed,
  * and how the pref was accrued (for showing the work in the UI).
  *
  * Payments dated on `asOfDate` count (they belong to earlier distributions that day). Payments
@@ -25,14 +25,14 @@ const ACCRUAL_DENOMINATOR = 10_000 * 365;
  * the payments from *before* it: pref accrues up to the distribution date, then the distribution
  * pays it.
  */
-export function computeInvestorState(
-  investor: Investor,
+export function computeInvestmentState(
+  investment: Investment,
   priorPayments: PriorPayment[],
   asOfDate: string,
   prefRateBps: number | null,
-): InvestorState {
+): InvestmentState {
   const payments = priorPayments.filter(
-    (p) => p.investorId === investor.id && p.date <= asOfDate,
+    (p) => p.investmentId === investment.id && p.date <= asOfDate,
   );
   const paidIn = (tierType: TierType) =>
     sum(
@@ -45,7 +45,7 @@ export function computeInvestorState(
 
   const base = {
     capitalReturnedCents,
-    unreturnedCapitalCents: investor.amountCents - capitalReturnedCents,
+    unreturnedCapitalCents: investment.amountCents - capitalReturnedCents,
     prefPaidCents,
     splitPaidCents,
     totalReceivedCents: capitalReturnedCents + prefPaidCents + splitPaidCents,
@@ -61,7 +61,7 @@ export function computeInvestorState(
   }
 
   const { periods, numerator } = buildAccrualPeriods(
-    investor,
+    investment,
     payments,
     asOfDate,
     prefRateBps,
@@ -86,7 +86,7 @@ export function computeInvestorState(
  * investment date to `asOfDate` into periods at those days. Each period accrues at its own balance.
  */
 function buildAccrualPeriods(
-  investor: Investor,
+  investment: Investment,
   payments: PriorPayment[],
   asOfDate: string,
   prefRateBps: number,
@@ -118,8 +118,8 @@ function buildAccrualPeriods(
     });
   };
 
-  let from = investor.investmentDate;
-  let balance = investor.amountCents;
+  let from = investment.investmentDate;
+  let balance = investment.amountCents;
   for (const date of [...capitalReturnedOn.keys()].sort()) {
     addPeriod(from, date, balance);
     // The return lowers the balance from this day on.

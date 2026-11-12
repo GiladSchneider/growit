@@ -37,34 +37,34 @@ import { Hint, MoneyInput, errorMessage } from "../shared";
 import { MANAGER_META, TIER_META } from "../tier-meta";
 import { Callout, DateField, EmptyState, Panel } from "../ui-kit";
 import { AllocationBreakdown } from "./allocation-breakdown";
-import { InvestorWork } from "./investor-work";
+import { InvestmentWork } from "./investment-work";
 import { RecipientTable, type RecipientRow } from "./recipient-table";
 import { usePlanInputs } from "../use-plan-inputs";
 
 export function NewDistribution({
-  investorCount,
+  investmentCount,
   hasWaterfall,
   waterfallDirty,
   latestDate,
 }: {
-  investorCount: number;
+  investmentCount: number;
   hasWaterfall: boolean;
   waterfallDirty: boolean;
   latestDate: string | null;
 }) {
-  if (investorCount === 0 || !hasWaterfall) {
+  if (investmentCount === 0 || !hasWaterfall) {
     return (
       <Panel title="New distribution">
         <EmptyState
           title={
-            investorCount === 0 && !hasWaterfall
+            investmentCount === 0 && !hasWaterfall
               ? "Add investors and save a waterfall first"
-              : investorCount === 0
+              : investmentCount === 0
                 ? "Add investors first"
                 : "Save a waterfall first"
           }
         >
-          {investorCount === 0 && (
+          {investmentCount === 0 && (
             <Button variant="outline" asChild>
               <Link href="/cap-table">Go to cap table</Link>
             </Button>
@@ -80,7 +80,7 @@ export function NewDistribution({
   }
   return (
     <DistributionForm
-      investorCount={investorCount}
+      investmentCount={investmentCount}
       waterfallDirty={waterfallDirty}
       latestDate={latestDate}
     />
@@ -88,11 +88,11 @@ export function NewDistribution({
 }
 
 function DistributionForm({
-  investorCount,
+  investmentCount,
   waterfallDirty,
   latestDate,
 }: {
-  investorCount: number;
+  investmentCount: number;
   waterfallDirty: boolean;
   latestDate: string | null;
 }) {
@@ -194,7 +194,7 @@ function DistributionForm({
           <PlanView
             plan={plan}
             excludedCount={
-              plan.result ? investorCount - plan.result.investors.length : 0
+              plan.result ? investmentCount - plan.result.investments.length : 0
             }
             onUseMax={(cents) => setAmountText(centsToInputText(cents))}
           />
@@ -321,15 +321,15 @@ function PreviewTable({
   const prefRateBps = prefRateOf(tiers);
   const tierTypes = tiers.map((t) => t.type);
 
-  const rows: RecipientRow[] = result.investors.map((row) => ({
-    key: `investor-${row.investor.id}`,
-    name: row.investor.name,
+  const rows: RecipientRow[] = result.investments.map((row) => ({
+    key: `investor-${row.investment.id}`,
+    name: row.investment.investorName,
     kind: "investor",
     ownership: row.ownership,
     byTier: row.byTier,
     totalCents: row.totalCents,
     details: (
-      <InvestorWork
+      <InvestmentWork
         row={row}
         date={result.date}
         prefRateBps={prefRateBps}

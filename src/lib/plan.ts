@@ -9,7 +9,7 @@ import {
   validateWaterfall,
   type Allocation,
   type DistributionResult,
-  type Investor,
+  type Investment,
   type PriorPayment,
   type Tier,
 } from "~/lib/engine";
@@ -23,7 +23,7 @@ export type ActiveDistribution = {
 };
 
 export type PlanInputs = {
-  investors: Investor[];
+  investments: Investment[];
   /** The saved waterfall. */
   tiers: Tier[];
   activeDistributions: ActiveDistribution[];
@@ -36,7 +36,7 @@ export type PlanInputs = {
  * waterfall and the distribution history), the same way the server reads them from the database.
  */
 export function toPlanInputs(data: {
-  investors: Investor[];
+  investments: Investment[];
   tiers: Tier[];
   distributions: (ActiveDistribution & {
     status: "finalized" | "voided";
@@ -46,10 +46,10 @@ export function toPlanInputs(data: {
   const active = data.distributions.filter((d) => d.status === "finalized");
   return {
     // Copy just the fields the engine uses, so the result has exactly the server's shape.
-    investors: data.investors.map(
-      ({ id, name, amountCents, investmentDate, createdAt }) => ({
+    investments: data.investments.map(
+      ({ id, investorName, amountCents, investmentDate, createdAt }) => ({
         id,
-        name,
+        investorName,
         amountCents,
         investmentDate,
         createdAt,
@@ -73,8 +73,8 @@ export type Problem = {
     | "backdated"
     | "no-waterfall"
     | "invalid-waterfall"
-    | "no-investors"
-    | "no-eligible-investors"
+    | "no-investments"
+    | "no-eligible-investments"
     | "no-amount"
     | "undistributed";
   message: string;
@@ -91,7 +91,7 @@ export type DistributionPlan = {
 };
 
 export function planDistribution(
-  { investors, tiers, activeDistributions, priorPayments }: PlanInputs,
+  { investments, tiers, activeDistributions, priorPayments }: PlanInputs,
   date: string,
   amountCents: number,
 ): DistributionPlan {
@@ -121,14 +121,14 @@ export function planDistribution(
     });
   }
 
-  if (investors.length === 0) {
+  if (investments.length === 0) {
     problems.push({
-      code: "no-investors",
-      message: "There are no investors yet. Add them in the Cap Table step.",
+      code: "no-investments",
+      message: "There are no investments yet. Add them on the Cap table page.",
     });
-  } else if (!investors.some((i) => i.investmentDate <= date)) {
+  } else if (!investments.some((i) => i.investmentDate <= date)) {
     problems.push({
-      code: "no-eligible-investors",
+      code: "no-eligible-investments",
       message:
         "No investors had invested by this date. Pick a date on or after the first investment.",
     });
@@ -145,7 +145,7 @@ export function planDistribution(
   if (problems.length > 0) return { result: null, problems, blocking, tiers };
 
   const result = runDistribution({
-    investors,
+    investments,
     tiers,
     priorPayments,
     date,

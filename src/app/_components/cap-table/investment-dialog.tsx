@@ -24,12 +24,12 @@ import { api, type RouterOutputs } from "~/trpc/react";
 import { MoneyInput, TextInput } from "../shared";
 import { Callout, DateField } from "../ui-kit";
 
-export type InvestorRow =
-  RouterOutputs["investors"]["list"]["investors"][number];
-export type InvestorDialogState =
-  { mode: "add" } | { mode: "edit"; investor: InvestorRow } | null;
-export type InvestorFields = {
-  name: string;
+export type InvestmentRow =
+  RouterOutputs["investments"]["list"]["investments"][number];
+export type InvestmentDialogState =
+  { mode: "add" } | { mode: "edit"; investment: InvestmentRow } | null;
+export type InvestmentFields = {
+  investorName: string;
   amountCents: number;
   investmentDate: string;
 };
@@ -39,23 +39,23 @@ export type InvestorFields = {
  * to `onSubmit` and closes right away; the page saves them optimistically.
  * Remounts on every open so the form always starts fresh.
  */
-export function InvestorDialog({
+export function InvestmentDialog({
   state,
   onClose,
   onSubmit,
   latestDistributionDate,
 }: {
-  state: InvestorDialogState;
+  state: InvestmentDialogState;
   onClose: () => void;
-  onSubmit: (values: InvestorFields) => void;
+  onSubmit: (values: InvestmentFields) => void;
   latestDistributionDate: string | null;
 }) {
   return (
     <Dialog open={state !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="gap-5 p-6 sm:max-w-md">
         {state && (
-          <InvestorForm
-            key={state.mode === "edit" ? state.investor.id : "new"}
+          <InvestmentForm
+            key={state.mode === "edit" ? state.investment.id : "new"}
             state={state}
             onCancel={onClose}
             onSubmit={onSubmit}
@@ -69,21 +69,21 @@ export function InvestorDialog({
 
 type FieldErrors = Partial<Record<"name" | "amount" | "date", string>>;
 
-function InvestorForm({
+function InvestmentForm({
   state,
   onCancel,
   onSubmit,
   latestDistributionDate,
 }: {
-  state: NonNullable<InvestorDialogState>;
+  state: NonNullable<InvestmentDialogState>;
   onCancel: () => void;
-  onSubmit: (values: InvestorFields) => void;
+  onSubmit: (values: InvestmentFields) => void;
   latestDistributionDate: string | null;
 }) {
-  const editing = state.mode === "edit" ? state.investor : null;
+  const editing = state.mode === "edit" ? state.investment : null;
   const locked = editing?.locked ?? false;
 
-  const [name, setName] = useState(editing?.name ?? "");
+  const [name, setName] = useState(editing?.investorName ?? "");
   const [amount, setAmount] = useState(
     editing ? centsToInputText(editing.amountCents) : "",
   );
@@ -126,7 +126,7 @@ function InvestorForm({
     if (Object.keys(errors).length > 0 || blocking.length > 0) return;
     if (amountCents === null) return;
 
-    onSubmit({ name: name.trim(), amountCents, investmentDate: date });
+    onSubmit({ investorName: name.trim(), amountCents, investmentDate: date });
   };
 
   return (

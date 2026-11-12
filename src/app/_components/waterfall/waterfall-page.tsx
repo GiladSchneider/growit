@@ -279,7 +279,7 @@ function SummaryPanel({
                 <span
                   className={cn(
                     "leading-snug",
-                    errorsByTier(index) && "text-red-600",
+                    errorsByTier(index) && "text-destructive",
                   )}
                 >
                   {errorsByTier(index)
@@ -292,7 +292,7 @@ function SummaryPanel({
         )}
 
         {errorCount > 0 && tiers.length > 0 && (
-          <p className="flex items-center gap-2 text-sm font-medium text-red-600">
+          <p className="text-destructive flex items-center gap-2 text-sm font-medium">
             <CircleAlert className="size-4" />
             {errorCount === 1
               ? "1 issue to fix"

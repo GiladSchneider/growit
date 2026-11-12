@@ -1,6 +1,7 @@
 "use client";
 
-import { Layers, Sprout, Users, Wallet, type LucideIcon } from "lucide-react";
+import { Layers, Users, Wallet, type LucideIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Toaster } from "sonner";
@@ -36,11 +37,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function Logo() {
   return (
-    <Link href="/cap-table" className="flex items-center gap-2.5">
-      <span className="bg-brand text-brand-foreground flex size-7 items-center justify-center rounded-lg">
-        <Sprout className="size-4" />
-      </span>
-      <span className="text-[15px] font-semibold tracking-tight">GrowIt</span>
+    <Link href="/cap-table" className="flex items-center">
+      <Image
+        src="/growit-logo.webp"
+        alt="growit"
+        width={640}
+        height={204}
+        priority
+        className="h-8 w-auto"
+      />
     </Link>
   );
 }
@@ -50,7 +55,7 @@ function Sidebar() {
   const { dirty } = useWaterfallDraft();
 
   return (
-    <aside className="bg-sidebar sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r lg:flex">
+    <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r lg:flex">
       <div className="px-5 py-5">
         <Logo />
       </div>
@@ -68,8 +73,8 @@ function Sidebar() {
                   className={cn(
                     "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
                     active
-                      ? "bg-muted text-foreground font-medium"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                   )}
                 >
                   <Icon className="size-4" />
@@ -94,7 +99,7 @@ function MobileNav() {
   const pathname = usePathname();
   const { dirty } = useWaterfallDraft();
   return (
-    <div className="bg-sidebar sticky top-0 z-30 border-b lg:hidden">
+    <div className="bg-sidebar text-sidebar-foreground border-sidebar-border sticky top-0 z-30 border-b lg:hidden">
       <div className="px-5 pt-4">
         <Logo />
       </div>
@@ -106,7 +111,9 @@ function MobileNav() {
             prefetch
             className={cn(
               "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
-              pathname === href ? "bg-muted" : "text-muted-foreground",
+              pathname === href
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/70",
             )}
           >
             {label}

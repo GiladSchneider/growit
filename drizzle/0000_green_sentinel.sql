@@ -3,7 +3,7 @@ CREATE TABLE `distribution_allocations` (
 	`distribution_id` integer NOT NULL,
 	`tier_type` text NOT NULL,
 	`recipient_type` text NOT NULL,
-	`investor_id` integer,
+	`investment_id` integer,
 	`amount_cents` integer NOT NULL,
 	FOREIGN KEY (`distribution_id`) REFERENCES `distributions`(`id`) ON UPDATE no action ON DELETE no action
 );
@@ -19,9 +19,9 @@ CREATE TABLE `distributions` (
 	`voided_at` text
 );
 --> statement-breakpoint
-CREATE TABLE `investors` (
+CREATE TABLE `investments` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`name` text NOT NULL,
+	`investor_name` text NOT NULL,
 	`amount_cents` integer NOT NULL,
 	`investment_date` text NOT NULL,
 	`created_at` text NOT NULL

@@ -1,10 +1,10 @@
 import { distributionsRouter } from "~/server/api/routers/distributions";
-import { investorsRouter } from "~/server/api/routers/investors";
+import { investmentsRouter } from "~/server/api/routers/investments";
 import { waterfallRouter } from "~/server/api/routers/waterfall";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
-  investors: investorsRouter,
+  investments: investmentsRouter,
   waterfall: waterfallRouter,
   distributions: distributionsRouter,
 });

@@ -58,7 +58,7 @@ export function StatCard({
         {dot && <span className={cn("size-2 rounded-full", dot)} />}
         {label}
       </p>
-      <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
+      <p className="font-heading mt-1 text-xl font-semibold tracking-tight tabular-nums">
         {value}
       </p>
       {hint && <p className="text-muted-foreground mt-0.5 text-xs">{hint}</p>}

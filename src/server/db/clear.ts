@@ -2,7 +2,7 @@ import type { Db } from "~/server/db";
 import {
   distributionAllocations,
   distributions,
-  investors,
+  investments,
   waterfallTiers,
 } from "~/server/db/schema";
 
@@ -11,7 +11,7 @@ export async function clearDatabase(db: Db) {
   for (const table of [
     distributionAllocations,
     distributions,
-    investors,
+    investments,
     waterfallTiers,
   ]) {
     // eslint-disable-next-line drizzle/enforce-delete-with-where -- intentionally clearing every row

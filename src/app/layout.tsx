@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 
 import { AppShell } from "~/app/_components/app-shell";
 import { TooltipProvider } from "~/components/ui/tooltip";
@@ -9,14 +9,19 @@ import { TRPCReactProvider } from "~/trpc/react";
 import { HydrateClient, api } from "~/trpc/server";
 
 export const metadata: Metadata = {
-  title: "GrowIt Distributions",
+  title: "growit",
   description: "Cap table, distribution waterfall and distributions engine",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const geist = Geist({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-geist-sans",
+  variable: "--font-inter",
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta-sans",
 });
 
 export default async function RootLayout({
@@ -26,13 +31,13 @@ export default async function RootLayout({
   // showing skeletons while the browser fetches. HydrateClient hands it to the client cache, and
   // because layouts persist across navigation, later page switches read from that cache.
   await Promise.all([
-    api.investors.list.prefetch(),
+    api.investments.list.prefetch(),
     api.waterfall.get.prefetch(),
     api.distributions.list.prefetch(),
   ]);
 
   return (
-    <html lang="en" className={`${geist.variable}`}>
+    <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
       <body>
         <TRPCReactProvider>
           <HydrateClient>

@@ -2,20 +2,20 @@
 
 import { ArrowRight } from "lucide-react";
 
-import type { InvestorResult, TierType } from "~/lib/engine";
+import type { InvestmentResult, TierType } from "~/lib/engine";
 import { formatCents } from "~/lib/format";
 import { cn } from "~/lib/utils";
 import { PrefAccrualCard } from "../pref-accrual";
 import { TIER_META } from "../tier-meta";
 
-/** "Show the work" for one investor in a preview: how their pref accrued and how their balances move. */
-export function InvestorWork({
+/** "Show the work" for one investment in a preview: how their pref accrued and how their balances move. */
+export function InvestmentWork({
   row,
   date,
   prefRateBps,
   tierTypes,
 }: {
-  row: InvestorResult;
+  row: InvestmentResult;
   date: string;
   prefRateBps: number | null;
   tierTypes: TierType[];
@@ -28,7 +28,7 @@ export function InvestorWork({
         className="lg:col-span-3"
         state={before}
         date={date}
-        investmentDate={row.investor.investmentDate}
+        investmentDate={row.investment.investmentDate}
         prefRateBps={prefRateBps}
         paidLabel="Paid in earlier distributions"
       />

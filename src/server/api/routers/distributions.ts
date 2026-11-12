@@ -8,7 +8,7 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import {
   distributionAllocations,
   distributions,
-  investors,
+  investments,
 } from "~/server/db/schema";
 import { planDistribution } from "~/lib/plan";
 import { loadLatestActiveDistribution, loadPlanInputs } from "~/server/ledger";
@@ -16,7 +16,7 @@ import { loadLatestActiveDistribution, loadPlanInputs } from "~/server/ledger";
 export const distributionsRouter = createTRPCRouter({
   /** Every distribution, newest first, voided ones included (they're the audit trail). */
   list: publicProcedure.query(async ({ ctx }) => {
-    const [rows, allocations, investorRows, latest] = await Promise.all([
+    const [rows, allocations, investmentRows, latest] = await Promise.all([
       ctx.db
         .select()
         .from(distributions)
@@ -25,10 +25,12 @@ export const distributionsRouter = createTRPCRouter({
         .select()
         .from(distributionAllocations)
         .orderBy(asc(distributionAllocations.id)),
-      ctx.db.select({ id: investors.id, name: investors.name }).from(investors),
+      ctx.db
+        .select({ id: investments.id, investorName: investments.investorName })
+        .from(investments),
       loadLatestActiveDistribution(ctx.db),
     ]);
-    const names = new Map(investorRows.map((i) => [i.id, i.name]));
+    const names = new Map(investmentRows.map((i) => [i.id, i.investorName]));
 
     return rows.map((row) => ({
       ...row,
@@ -37,9 +39,9 @@ export const distributionsRouter = createTRPCRouter({
         .map((a) => ({
           ...a,
           recipientName:
-            a.investorId === null
+            a.investmentId === null
               ? "Managers"
-              : (names.get(a.investorId) ?? "Removed investor"),
+              : (names.get(a.investmentId) ?? "Removed investment"),
         })),
       // Only the latest active distribution can be voided.
       canVoid: row.id === latest?.id,

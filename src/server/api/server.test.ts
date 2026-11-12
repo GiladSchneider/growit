@@ -5,7 +5,7 @@ import path from "node:path";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { computeInvestorState } from "~/lib/engine";
+import { computeInvestmentState } from "~/lib/engine";
 import { planDistribution, toPlanInputs } from "~/lib/plan";
 import { createCaller } from "~/server/api/root";
 import { createDb } from "~/server/db";
@@ -38,8 +38,8 @@ const STANDARD_WATERFALL = [
 
 beforeEach(async () => {
   ({ api, db } = await createTestApi());
-  await api.investors.create({
-    name: "A",
+  await api.investments.create({
+    investorName: "A",
     amountCents: 100_000_00,
     investmentDate: "2025-01-01",
   });
@@ -94,7 +94,7 @@ describe("append-only ledger", () => {
     const [distribution] = await api.distributions.list();
     expect(distribution!.waterfallSnapshot).toEqual(STANDARD_WATERFALL);
     const paidToA = distribution!.allocations
-      .filter((a) => a.investorId !== null)
+      .filter((a) => a.investmentId !== null)
       .map((a) => [a.tierType, a.amountCents]);
     expect(paidToA).toEqual([
       ["pref", 8_000_00],
@@ -136,9 +136,9 @@ describe("void", () => {
       amountCents: 10_000_00,
     });
     await api.distributions.void({ id: first.id });
-    const { investors, priorPayments } = await loadPlanInputs(db);
-    const state = computeInvestorState(
-      investors[0]!,
+    const { investments, priorPayments } = await loadPlanInputs(db);
+    const state = computeInvestmentState(
+      investments[0]!,
       priorPayments,
       "2026-01-01",
       800,
@@ -195,28 +195,30 @@ describe("waterfall locking", () => {
 });
 
 describe("cap table locking", () => {
-  it("locks investors who took part in an active distribution", async () => {
+  it("locks investments that took part in an active distribution", async () => {
     await api.distributions.finalize({
       date: "2026-01-01",
       amountCents: 10_000_00,
     });
-    const { investors } = await api.investors.list();
-    const a = investors[0]!;
+    const { investments } = await api.investments.list();
+    const a = investments[0]!;
     expect(a.locked).toBe(true);
 
     await expect(
-      api.investors.update({ ...a, amountCents: 1 }),
+      api.investments.update({ ...a, amountCents: 1 }),
     ).rejects.toThrow(/void every distribution dated on or after Jan 1, 2025/);
     await expect(
-      api.investors.update({ ...a, investmentDate: "2025-02-01" }),
+      api.investments.update({ ...a, investmentDate: "2025-02-01" }),
     ).rejects.toThrow(/was part of finalized distributions/);
-    await expect(api.investors.delete({ id: a.id })).rejects.toThrow(
+    await expect(api.investments.delete({ id: a.id })).rejects.toThrow(
       /deleting it/,
     );
 
     // Names can always change.
-    await api.investors.update({ ...a, name: "A (renamed)" });
-    expect((await api.investors.list()).investors[0]!.name).toBe("A (renamed)");
+    await api.investments.update({ ...a, investorName: "A (renamed)" });
+    expect((await api.investments.list()).investments[0]!.investorName).toBe(
+      "A (renamed)",
+    );
   });
 
   it("only accepts new investments dated after the latest distribution", async () => {
@@ -225,31 +227,31 @@ describe("cap table locking", () => {
       amountCents: 10_000_00,
     });
     await expect(
-      api.investors.create({
-        name: "B",
+      api.investments.create({
+        investorName: "B",
         amountCents: 1_000_00,
         investmentDate: "2026-01-01",
       }),
     ).rejects.toThrow(/must be after Jan 1, 2026/);
 
-    const b = await api.investors.create({
-      name: "B",
+    const b = await api.investments.create({
+      investorName: "B",
       amountCents: 1_000_00,
       investmentDate: "2026-01-02",
     });
-    // Unlocked investors can be edited, but still not moved to on/before the latest distribution.
-    await api.investors.update({ ...b, amountCents: 2_000_00 });
+    // Unlocked investments can be edited, but still not moved to on/before the latest distribution.
+    await api.investments.update({ ...b, amountCents: 2_000_00 });
     await expect(
-      api.investors.update({ ...b, investmentDate: "2025-12-01" }),
+      api.investments.update({ ...b, investmentDate: "2025-12-01" }),
     ).rejects.toThrow(/must be after/);
-    await api.investors.delete({ id: b.id });
+    await api.investments.delete({ id: b.id });
   });
 });
 
 describe("browser preview", () => {
   it("matches the server exactly when built from the data the browser has", async () => {
-    await api.investors.create({
-      name: "B",
+    await api.investments.create({
+      investorName: "B",
       amountCents: 50_000_00,
       investmentDate: "2025-06-01",
     });
@@ -265,7 +267,7 @@ describe("browser preview", () => {
 
     // What the browser does: plan from its cached queries.
     const inputs = toPlanInputs({
-      investors: (await api.investors.list()).investors,
+      investments: (await api.investments.list()).investments,
       tiers: (await api.waterfall.get()).tiers,
       distributions: await api.distributions.list(),
     });

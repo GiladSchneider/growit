@@ -37,26 +37,26 @@ import {
   Panel,
 } from "../ui-kit";
 import {
-  InvestorDialog,
-  type InvestorDialogState,
-  type InvestorRow,
-} from "./investor-dialog";
+  InvestmentDialog,
+  type InvestmentDialogState,
+  type InvestmentRow,
+} from "./investment-dialog";
 import { InvestmentDetails } from "./investment-details";
-import { useInvestorMutations } from "./use-investor-mutations";
+import { useInvestmentMutations } from "./use-investment-mutations";
 
 const LOCKED_HINT =
   "Included in a finalized distribution, so the amount and date can't change. Void that distribution to unlock it. The name can still be edited.";
 
 export function CapTablePage() {
-  const { data } = api.investors.list.useQuery();
-  const [dialog, setDialog] = useState<InvestorDialogState>(null);
-  const [deleting, setDeleting] = useState<InvestorRow | null>(null);
+  const { data } = api.investments.list.useQuery();
+  const [dialog, setDialog] = useState<InvestmentDialogState>(null);
+  const [deleting, setDeleting] = useState<InvestmentRow | null>(null);
   // Ids of the rows whose details are expanded (same pattern as the distribution preview).
   const [open, setOpen] = useState<Set<number>>(new Set());
-  const { create, update, remove } = useInvestorMutations();
+  const { create, update, remove } = useInvestmentMutations();
 
   if (!data) return <PageSkeleton title="Cap table" />;
-  const { investors, totalCents, latestDistributionDate } = data;
+  const { investments, totalCents, latestDistributionDate } = data;
 
   const toggle = (id: number) => {
     const next = new Set(open);
@@ -71,7 +71,7 @@ export function CapTablePage() {
         title="Cap table"
         description="One row per investment."
         actions={
-          investors.length > 0 && (
+          investments.length > 0 && (
             <Button onClick={() => setDialog({ mode: "add" })}>
               <Plus /> Add investment
             </Button>
@@ -80,7 +80,7 @@ export function CapTablePage() {
       />
 
       <Panel>
-        {investors.length === 0 ? (
+        {investments.length === 0 ? (
           <EmptyState
             title="No investments yet"
             description="Add an investor's name, amount and investment date."
@@ -101,29 +101,29 @@ export function CapTablePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {investors.map((investor) => {
+              {investments.map((investment) => {
                 // A negative id is a row that's still being saved, so there's nothing to show yet.
-                const saved = investor.id > 0;
-                const isOpen = open.has(investor.id);
+                const saved = investment.id > 0;
+                const isOpen = open.has(investment.id);
                 return (
-                  <Fragment key={investor.id}>
+                  <Fragment key={investment.id}>
                     <TableRow
                       className={cn(
                         saved && "cursor-pointer",
                         isOpen && "bg-muted/40",
                       )}
-                      onClick={() => saved && toggle(investor.id)}
+                      onClick={() => saved && toggle(investment.id)}
                     >
                       <TableCell className="pr-0">
                         <button
                           type="button"
                           aria-expanded={isOpen}
-                          aria-label={`Details for ${investor.name}`}
+                          aria-label={`Details for ${investment.investorName}`}
                           disabled={!saved}
                           className="text-muted-foreground hover:text-foreground flex size-6 items-center justify-center rounded-md disabled:opacity-40"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggle(investor.id);
+                            toggle(investment.id);
                           }}
                         >
                           <ChevronRight
@@ -136,9 +136,11 @@ export function CapTablePage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar name={investor.name} />
-                          <span className="font-medium">{investor.name}</span>
-                          {investor.locked && (
+                          <Avatar name={investment.investorName} />
+                          <span className="font-medium">
+                            {investment.investorName}
+                          </span>
+                          {investment.locked && (
                             <Hint text={LOCKED_HINT}>
                               <Badge
                                 variant="outline"
@@ -151,13 +153,13 @@ export function CapTablePage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(investor.investmentDate)}
+                        {formatDate(investment.investmentDate)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        <Money cents={investor.amountCents} />
+                        <Money cents={investment.amountCents} />
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatPercent(investor.ownership)}
+                        {formatPercent(investment.ownership)}
                       </TableCell>
                     </TableRow>
                     {isOpen && (
@@ -167,9 +169,11 @@ export function CapTablePage() {
                           className="bg-muted/30 p-0 whitespace-normal"
                         >
                           <InvestmentDetails
-                            investor={investor}
-                            onEdit={() => setDialog({ mode: "edit", investor })}
-                            onDelete={() => setDeleting(investor)}
+                            investment={investment}
+                            onEdit={() =>
+                              setDialog({ mode: "edit", investment })
+                            }
+                            onDelete={() => setDeleting(investment)}
                           />
                         </TableCell>
                       </TableRow>
@@ -195,12 +199,12 @@ export function CapTablePage() {
         )}
       </Panel>
 
-      <InvestorDialog
+      <InvestmentDialog
         state={dialog}
         onClose={() => setDialog(null)}
         onSubmit={(values) => {
           if (dialog?.mode === "edit") {
-            update.mutate({ id: dialog.investor.id, ...values });
+            update.mutate({ id: dialog.investment.id, ...values });
           } else {
             create.mutate(values);
           }
@@ -209,7 +213,7 @@ export function CapTablePage() {
         latestDistributionDate={latestDistributionDate}
       />
       <DeleteDialog
-        investor={deleting}
+        investment={deleting}
         onClose={() => setDeleting(null)}
         onConfirm={(id) => remove.mutate({ id })}
       />
@@ -218,36 +222,36 @@ export function CapTablePage() {
 }
 
 function DeleteDialog({
-  investor,
+  investment,
   onClose,
   onConfirm,
 }: {
-  investor: InvestorRow | null;
+  investment: InvestmentRow | null;
   onClose: () => void;
   onConfirm: (id: number) => void;
 }) {
   return (
     <AlertDialog
-      open={investor !== null}
+      open={investment !== null}
       onOpenChange={(open) => !open && onClose()}
     >
       <AlertDialogContent>
-        {investor && (
+        {investment && (
           <>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                Delete {investor.name}&apos;s investment?
+                Delete {investment.investorName}&apos;s investment?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {formatCents(investor.amountCents)} invested on{" "}
-                {formatDate(investor.investmentDate)}.
+                {formatCents(investment.amountCents)} invested on{" "}
+                {formatDate(investment.investmentDate)}.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
-                onClick={() => onConfirm(investor.id)}
+                onClick={() => onConfirm(investment.id)}
               >
                 Delete
               </AlertDialogAction>

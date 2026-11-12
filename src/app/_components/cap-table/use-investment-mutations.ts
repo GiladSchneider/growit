@@ -5,36 +5,36 @@ import { toast } from "sonner";
 import { api, type RouterOutputs } from "~/trpc/react";
 import { errorMessage } from "../shared";
 
-type CapTable = RouterOutputs["investors"]["list"];
-type Row = CapTable["investors"][number];
+type CapTable = RouterOutputs["investments"]["list"];
+type Row = CapTable["investments"][number];
 
 /**
  * Cap table edits are optimistic: the cached table changes the moment you click, and the server
  * confirms in the background. If the server refuses (rare, because the form checks the same rules
  * first), the change is rolled back and the error is shown. Afterwards the real data is refetched.
  */
-export function useInvestorMutations() {
+export function useInvestmentMutations() {
   const utils = api.useUtils();
 
   /** Applies a local change to the cached cap table and returns the previous version for rollback. */
   const applyLocally = async (change: (rows: Row[]) => Row[]) => {
-    await utils.investors.list.cancel(); // so an in-flight fetch can't overwrite the change
-    const previous = utils.investors.list.getData();
+    await utils.investments.list.cancel(); // so an in-flight fetch can't overwrite the change
+    const previous = utils.investments.list.getData();
     if (previous) {
-      utils.investors.list.setData(
+      utils.investments.list.setData(
         undefined,
-        withRows(previous, change(previous.investors)),
+        withRows(previous, change(previous.investments)),
       );
     }
     return { previous };
   };
   const rollback = (error: unknown, previous: CapTable | undefined) => {
-    utils.investors.list.setData(undefined, previous);
+    utils.investments.list.setData(undefined, previous);
     toast.error(errorMessage(error));
   };
   const refresh = () => utils.invalidate();
 
-  const create = api.investors.create.useMutation({
+  const create = api.investments.create.useMutation({
     onMutate: (values) =>
       applyLocally((rows) => [
         ...rows,
@@ -51,7 +51,7 @@ export function useInvestorMutations() {
     onSettled: refresh,
   });
 
-  const update = api.investors.update.useMutation({
+  const update = api.investments.update.useMutation({
     onMutate: ({ id, ...values }) =>
       applyLocally((rows) =>
         rows.map((row) => (row.id === id ? { ...row, ...values } : row)),
@@ -60,7 +60,7 @@ export function useInvestorMutations() {
     onSettled: refresh,
   });
 
-  const remove = api.investors.delete.useMutation({
+  const remove = api.investments.delete.useMutation({
     onMutate: ({ id }) =>
       applyLocally((rows) => rows.filter((row) => row.id !== id)),
     onError: (error, _values, context) => rollback(error, context?.previous),
@@ -77,7 +77,7 @@ function withRows(table: CapTable, rows: Row[]): CapTable {
   return {
     ...table,
     totalCents,
-    investors: sorted.map((row) => ({
+    investments: sorted.map((row) => ({
       ...row,
       ownership: totalCents > 0 ? row.amountCents / totalCents : 0,
     })),

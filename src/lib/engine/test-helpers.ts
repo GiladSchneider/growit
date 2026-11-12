@@ -1,15 +1,15 @@
 import { allocationsToPayments } from "./run-distribution";
-import type { DistributionResult, Investor, PriorPayment } from "./types";
+import type { DistributionResult, Investment, PriorPayment } from "./types";
 
-export function makeInvestor(
+export function makeInvestment(
   id: number,
   amountDollars: number,
   investmentDate: string,
   createdAt = `2020-01-01T00:00:00.${String(id).padStart(3, "0")}Z`,
-): Investor {
+): Investment {
   return {
     id,
-    name: `Investor ${id}`,
+    investorName: `Investor ${id}`,
     amountCents: amountDollars * 100,
     investmentDate,
     createdAt,

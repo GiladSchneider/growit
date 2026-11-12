@@ -10,19 +10,19 @@ import { api } from "~/trpc/react";
  * needs no request at all.
  */
 export function usePlanInputs(): PlanInputs | null {
-  const investors = api.investors.list.useQuery().data;
+  const investments = api.investments.list.useQuery().data;
   const waterfall = api.waterfall.get.useQuery().data;
   const distributions = api.distributions.list.useQuery().data;
 
   return useMemo(
     () =>
-      investors && waterfall && distributions
+      investments && waterfall && distributions
         ? toPlanInputs({
-            investors: investors.investors,
+            investments: investments.investments,
             tiers: waterfall.tiers,
             distributions,
           })
         : null,
-    [investors, waterfall, distributions],
+    [investments, waterfall, distributions],
   );
 }

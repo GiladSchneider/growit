@@ -5,7 +5,7 @@ import {
   addDays,
   runDistribution,
   type DistributionResult,
-  type Investor,
+  type Investment,
   type PriorPayment,
   type Tier,
 } from "./index";
@@ -14,9 +14,9 @@ import { toPayments } from "./test-helpers";
 // ---- Generators -------------------------------------------------------------------------------
 
 const START = "2020-01-01";
-const MAX_CENTS = 10_000_000_000; // $100M per investor / distribution
+const MAX_CENTS = 10_000_000_000; // $100M per investment / distribution
 
-const investorsArb = fc
+const investmentsArb = fc
   .array(
     fc.record({
       amountCents: fc.integer({ min: 1, max: MAX_CENTS }),
@@ -24,10 +24,10 @@ const investorsArb = fc
     }),
     { minLength: 1, maxLength: 5 },
   )
-  .map((rows): Investor[] =>
+  .map((rows): Investment[] =>
     rows.map((row, i) => ({
       id: i + 1,
-      name: `Investor ${i + 1}`,
+      investorName: `Investor ${i + 1}`,
       amountCents: row.amountCents,
       investmentDate: addDays(START, row.dayOffset),
       createdAt: `2020-01-01T00:00:00.${String(i).padStart(3, "0")}Z`,
@@ -59,8 +59,8 @@ const tiersArb = (opts: { split: "always" | "maybe" }) =>
     .filter((tiers) => tiers.length > 0);
 
 /** Distributions in date order, starting on or after the first investment so someone is eligible. */
-const distributionsArb = (investors: Investor[]) => {
-  const firstInvestment = investors.map((i) => i.investmentDate).sort()[0]!;
+const distributionsArb = (investments: Investment[]) => {
+  const firstInvestment = investments.map((i) => i.investmentDate).sort()[0]!;
   return fc
     .array(
       fc.record({
@@ -79,16 +79,16 @@ const distributionsArb = (investors: Investor[]) => {
 };
 
 const scenarioArb = (opts: { split: "always" | "maybe" }) =>
-  fc.tuple(investorsArb, tiersArb(opts)).chain(([investors, tiers]) =>
-    distributionsArb(investors).map((distributions) => ({
-      investors,
+  fc.tuple(investmentsArb, tiersArb(opts)).chain(([investments, tiers]) =>
+    distributionsArb(investments).map((distributions) => ({
+      investments,
       tiers,
       distributions,
     })),
   );
 
 function runAll(
-  investors: Investor[],
+  investments: Investment[],
   tiers: Tier[],
   distributions: { date: string; amountCents: number }[],
   priorPayments: PriorPayment[] = [],
@@ -97,7 +97,7 @@ function runAll(
   let payments = priorPayments;
   for (const d of distributions) {
     const result = runDistribution({
-      investors,
+      investments,
       tiers,
       priorPayments: payments,
       ...d,
@@ -115,8 +115,8 @@ describe("engine properties", () => {
     fc.assert(
       fc.property(
         scenarioArb({ split: "always" }),
-        ({ investors, tiers, distributions }) => {
-          for (const result of runAll(investors, tiers, distributions)
+        ({ investments, tiers, distributions }) => {
+          for (const result of runAll(investments, tiers, distributions)
             .results) {
             const allocated = result.allocations.reduce(
               (s, a) => s + a.amountCents,
@@ -138,8 +138,8 @@ describe("engine properties", () => {
     fc.assert(
       fc.property(
         scenarioArb({ split: "maybe" }),
-        ({ investors, tiers, distributions }) => {
-          for (const result of runAll(investors, tiers, distributions)
+        ({ investments, tiers, distributions }) => {
+          for (const result of runAll(investments, tiers, distributions)
             .results) {
             const allocated = result.allocations.reduce(
               (s, a) => s + a.amountCents,
@@ -164,13 +164,13 @@ describe("engine properties", () => {
     fc.assert(
       fc.property(
         scenarioArb({ split: "maybe" }),
-        ({ investors, tiers, distributions }) => {
-          for (const result of runAll(investors, tiers, distributions)
+        ({ investments, tiers, distributions }) => {
+          for (const result of runAll(investments, tiers, distributions)
             .results) {
             for (const allocation of result.allocations) {
               expect(allocation.amountCents).toBeGreaterThanOrEqual(0);
             }
-            for (const row of result.investors) {
+            for (const row of result.investments) {
               expect(row.byTier.roc).toBeLessThanOrEqual(
                 row.before.unreturnedCapitalCents,
               );
@@ -200,17 +200,17 @@ describe("engine properties", () => {
     fc.assert(
       fc.property(
         arb,
-        ({ investors, tiers, distributions, last, firstPart }) => {
+        ({ investments, tiers, distributions, last, firstPart }) => {
           fc.pre(last.amountCents >= 2);
           const history = runAll(
-            investors,
+            investments,
             tiers,
             distributions.slice(0, -1),
           ).payments;
 
-          const whole = runAll(investors, tiers, [last], history).results;
+          const whole = runAll(investments, tiers, [last], history).results;
           const parts = runAll(
-            investors,
+            investments,
             tiers,
             [
               { date: last.date, amountCents: firstPart },
@@ -224,8 +224,8 @@ describe("engine properties", () => {
             for (const r of results) {
               for (const a of r.allocations) {
                 totals.set(
-                  a.investorId,
-                  (totals.get(a.investorId) ?? 0) + a.amountCents,
+                  a.investmentId,
+                  (totals.get(a.investmentId) ?? 0) + a.amountCents,
                 );
               }
             }

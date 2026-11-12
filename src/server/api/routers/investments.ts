@@ -6,10 +6,10 @@ import { formatDate } from "~/lib/format";
 import { centsInput, dateInput } from "~/server/api/inputs";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import type { Db } from "~/server/db";
-import { investors } from "~/server/db/schema";
-import { loadInvestors, loadLatestActiveDistribution } from "~/server/ledger";
+import { investments } from "~/server/db/schema";
+import { loadInvestments, loadLatestActiveDistribution } from "~/server/ledger";
 
-// Cap table locking: once an investor has taken part in an active distribution (invested on or
+// Cap table locking: once an investment has taken part in an active distribution (invested on or
 // before its date), their amount and date shaped money that was already paid, so they're frozen.
 // Names can always change. New investments must come after the latest active distribution.
 
@@ -47,21 +47,21 @@ function assertAfterLatest(investmentDate: string, latestDate: string | null) {
   }
 }
 
-const investorFields = z.object({
-  name: z.string().trim().min(1, "Enter a name.").max(200),
+const investmentFields = z.object({
+  investorName: z.string().trim().min(1, "Enter a name.").max(200),
   amountCents: centsInput,
   investmentDate: dateInput,
 });
 
-export const investorsRouter = createTRPCRouter({
+export const investmentsRouter = createTRPCRouter({
   list: publicProcedure.query(async ({ ctx }) => {
     const [rows, latestDate] = await Promise.all([
-      loadInvestors(ctx.db),
+      loadInvestments(ctx.db),
       latestActiveDate(ctx.db),
     ]);
     const totalCents = rows.reduce((sum, row) => sum + row.amountCents, 0);
     return {
-      investors: rows.map((row) => ({
+      investments: rows.map((row) => ({
         ...row,
         ownership: totalCents > 0 ? row.amountCents / totalCents : 0,
         locked: isLocked(row.investmentDate, latestDate),
@@ -72,26 +72,26 @@ export const investorsRouter = createTRPCRouter({
   }),
 
   create: publicProcedure
-    .input(investorFields)
+    .input(investmentFields)
     .mutation(async ({ ctx, input }) => {
       return ctx.db.transaction(async (tx) => {
         assertAfterLatest(input.investmentDate, await latestActiveDate(tx));
-        const [row] = await tx.insert(investors).values(input).returning();
+        const [row] = await tx.insert(investments).values(input).returning();
         return row!;
       });
     }),
 
   update: publicProcedure
-    .input(investorFields.extend({ id: z.number().int() }))
+    .input(investmentFields.extend({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.transaction(async (tx) => {
-        const existing = await tx.query.investors.findFirst({
-          where: eq(investors.id, input.id),
+        const existing = await tx.query.investments.findFirst({
+          where: eq(investments.id, input.id),
         });
         if (!existing)
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Investor not found.",
+            message: "Investment not found.",
           });
 
         const latestDate = await latestActiveDate(tx);
@@ -106,13 +106,13 @@ export const investorsRouter = createTRPCRouter({
         }
 
         const [row] = await tx
-          .update(investors)
+          .update(investments)
           .set({
-            name: input.name,
+            investorName: input.investorName,
             amountCents: input.amountCents,
             investmentDate: input.investmentDate,
           })
-          .where(eq(investors.id, input.id))
+          .where(eq(investments.id, input.id))
           .returning();
         return row!;
       });
@@ -122,13 +122,13 @@ export const investorsRouter = createTRPCRouter({
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
       await ctx.db.transaction(async (tx) => {
-        const existing = await tx.query.investors.findFirst({
-          where: eq(investors.id, input.id),
+        const existing = await tx.query.investments.findFirst({
+          where: eq(investments.id, input.id),
         });
         if (!existing)
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Investor not found.",
+            message: "Investment not found.",
           });
 
         const latestDate = await latestActiveDate(tx);
@@ -136,7 +136,7 @@ export const investorsRouter = createTRPCRouter({
           throw lockedError("delete", existing.investmentDate);
         }
 
-        await tx.delete(investors).where(eq(investors.id, input.id));
+        await tx.delete(investments).where(eq(investments.id, input.id));
       });
     }),
 });
